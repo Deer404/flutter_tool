@@ -140,6 +140,3 @@ pnpm build
 npm link
 ```
 
-## �� 许可证
-
-MIT License 
