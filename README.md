@@ -1,4 +1,4 @@
-# FLT - Flutter 工具集
+# FLT - Flutter Utils
 
 > 简化Flutter开发的命令行工具
 
