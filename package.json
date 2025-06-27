@@ -6,6 +6,10 @@
   "bin": {
     "flt": "dist/bin/cli.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Deer404/flutter_tool"
+  },
   "type": "module",
   "scripts": {
     "dev": "rslib build --watch",
