@@ -1,6 +1,6 @@
 {
   "name": "@deer404/flt",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Flutter Tool - 简化Flutter开发的命令行工具",
   "main": "dist/index.js",
   "bin": {

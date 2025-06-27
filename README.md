@@ -5,7 +5,7 @@
 ## 📦 安装
 
 ```bash
-npm install -g flt
+npm install -g @deer404/flt
 ```
 
 ## 🚀 使用方法
@@ -14,13 +14,13 @@ npm install -g flt
 
 ```bash
 # 构建debug版本
-flt build
+flt android build
 
 # 构建release版本
-flt build --release
+flt android build --release
 
 # 自定义APK名称前缀
-flt build --name myapp
+flt android build --name myapp
 ```
 
 ### Android设备管理
@@ -47,7 +47,7 @@ flt android install --file /path/to/your/app.apk
 
 ## 📋 命令详解
 
-### `flt build`
+### `flt android build`
 
 构建Flutter APK，支持以下选项：
 
@@ -66,7 +66,7 @@ Android相关操作：
 
 #### `flt android install` (别名: `flt android i`)
 
-运行Flutter应用到连接的Android设备：
+安装APK到连接的Android设备：
 
 - `-d, --device <device>`: 指定设备ID
 - `-f, --file <file>`: 指定APK文件路径
