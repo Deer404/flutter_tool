@@ -1,9 +1,60 @@
 import { Command } from 'commander';
 import { execa } from 'execa';
-import { existsSync, renameSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, renameSync, readdirSync } from 'node:fs';
+import { join, resolve, basename } from 'node:path';
 import pc from 'picocolors';
 import { ensureFlutterProject, generateTimestamp, success, error, info, warn } from '../utils/common';
+
+/**
+ * 智能查找APK文件
+ * 1. 优先查找标准文件名（例如 app-debug.apk）
+ * 2. 如果没有找到，查找最新的带时间戳的文件（例如 app-debug-202506271511.apk）
+ * 3. 支持自定义APK名称前缀
+ */
+function findApkFile(buildType: string, namePrefix: string = 'app'): string | null {
+  const apkDir = resolve('build/app/outputs/flutter-apk');
+  
+  // 检查目录是否存在
+  if (!existsSync(apkDir)) {
+    return null;
+  }
+
+  const standardApkName = `${namePrefix}-${buildType}.apk`;
+  const standardApkPath = join(apkDir, standardApkName);
+  
+  // 优先查找标准文件名
+  if (existsSync(standardApkPath)) {
+    return standardApkPath;
+  }
+
+  // 如果标准文件不存在，查找带时间戳的文件
+  try {
+    const files = readdirSync(apkDir);
+    const timestampedApks = files
+      .filter(file => {
+        // 匹配模式：namePrefix-buildType-YYYYMMDDHHMM.apk
+        const pattern = new RegExp(`^${namePrefix}-${buildType}-\\d{12}\\.apk$`);
+        return pattern.test(file);
+      })
+      .map(file => ({
+        name: file,
+        path: join(apkDir, file),
+        // 提取时间戳用于排序
+        timestamp: file.match(new RegExp(`${namePrefix}-${buildType}-(\\d{12})\\.apk$`))?.[1] || '0'
+      }))
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp)); // 按时间戳降序排序
+
+    // 返回最新的文件
+    if (timestampedApks.length > 0) {
+      return timestampedApks[0].path;
+    }
+  } catch (err) {
+    // 读取目录失败，返回null
+    return null;
+  }
+
+  return null;
+}
 
 // 自定义帮助格式化函数
 function formatHelp(cmd: Command): string {
@@ -113,6 +164,7 @@ const androidCommand = new Command('android')
       .argument('[buildType]', '构建类型 (debug/release)', 'debug')
       .option('-d, --device <device>', '指定设备ID')
       .option('-f, --file <file>', 'APK文件路径')
+      .option('-n, --name <name>', 'APK名称前缀 (默认为"app")')
       .configureHelp({
         helpWidth: 80,
         sortOptions: false
@@ -144,24 +196,26 @@ const androidCommand = new Command('android')
           if (options.file) {
             // 如果指定了文件路径，使用指定的路径
             apkPath = path.resolve(options.file);
+            if (!fs.existsSync(apkPath)) {
+              error(`APK文件不存在: ${apkPath}`);
+              process.exit(1);
+            }
           } else {
-            // 根据构建类型确定默认路径
-            if (buildType === 'release') {
-              apkPath = path.resolve('build/app/outputs/flutter-apk/app-release.apk');
-            } else {
-              apkPath = path.resolve('build/app/outputs/flutter-apk/app-debug.apk');
+            // 智能查找APK文件
+            const namePrefix = options.name || 'app';
+            const foundApkPath = findApkFile(buildType, namePrefix);
+            if (!foundApkPath) {
+              error(`未找到 ${buildType} 模式的APK文件 (名称前缀: ${namePrefix})`);
+              info('请先构建APK文件或指定正确的APK路径');
+              if (buildType === 'release') {
+                info(`构建命令: flt android build --release${namePrefix !== 'app' ? ' --name ' + namePrefix : ''}`);
+              } else {
+                info(`构建命令: flt android build${namePrefix !== 'app' ? ' --name ' + namePrefix : ''}`);
+              }
+              process.exit(1);
             }
-          }
-          
-          if (!fs.existsSync(apkPath)) {
-            error(`APK文件不存在: ${apkPath}`);
-            info('请先构建APK文件或指定正确的APK路径');
-            if (buildType === 'release') {
-              info('构建命令: flt android build --release');
-            } else {
-              info('构建命令: flt android build');
-            }
-            process.exit(1);
+            apkPath = foundApkPath;
+            info(`找到APK文件: ${path.basename(apkPath)}`);
           }
 
           info('正在检查连接的Android设备...');
